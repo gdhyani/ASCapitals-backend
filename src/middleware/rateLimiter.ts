@@ -4,7 +4,10 @@ import { logger } from "../config/logger";
 // General rate limiter
 export const generalLimiter = rateLimit({
 	windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000"), // 15 minutes
-	max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100"), // Limit each IP to 100 requests per windowMs
+	max:
+		process.env.NODE_ENV === "development"
+			? parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "1000") // More lenient in development
+			: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100"), // Production limit
 	message: {
 		success: false,
 		message: "Too many requests from this IP, please try again later.",
@@ -23,7 +26,7 @@ export const generalLimiter = rateLimit({
 // Strict rate limiter for authentication endpoints
 export const authLimiter = rateLimit({
 	windowMs: 15 * 60 * 1000, // 15 minutes
-	max: 5, // Limit each IP to 5 requests per windowMs
+	max: process.env.NODE_ENV === "development" ? 50 : 5, // More lenient in development
 	message: {
 		success: false,
 		message: "Too many authentication attempts, please try again later.",
@@ -76,3 +79,14 @@ export const passwordResetLimiter = rateLimit({
 		});
 	},
 });
+
+// Development helper to reset rate limits
+export const resetRateLimits = () => {
+	if (process.env.NODE_ENV === "development") {
+		generalLimiter.resetKey("*");
+		authLimiter.resetKey("*");
+		uploadLimiter.resetKey("*");
+		passwordResetLimiter.resetKey("*");
+		logger.info("Rate limits reset for development");
+	}
+};

@@ -61,16 +61,7 @@ export class AuthController {
 				success: true,
 				message: "Login successful",
 				data: {
-					user: {
-						_id: result.user._id,
-						email: result.user.email,
-						firstName: result.user.firstName,
-						lastName: result.user.lastName,
-						role: result.user.role,
-						phoneNumber: result.user.phoneNumber,
-						profileImage: result.user.profileImage,
-						createdAt: result.user.createdAt,
-					},
+					user: result.user,
 					token: result.token,
 				},
 			};
@@ -97,18 +88,7 @@ export class AuthController {
 				success: true,
 				message: "Profile retrieved successfully",
 				data: {
-					user: {
-						_id: user._id,
-						email: user.email,
-						firstName: user.firstName,
-						lastName: user.lastName,
-						role: user.role,
-						phoneNumber: user.phoneNumber,
-						profileImage: user.profileImage,
-						address: user.address,
-						createdAt: user.createdAt,
-						updatedAt: user.updatedAt,
-					},
+					user
 				},
 			};
 
@@ -137,17 +117,7 @@ export class AuthController {
 				success: true,
 				message: "Profile updated successfully",
 				data: {
-					user: {
-						_id: updatedUser._id,
-						email: updatedUser.email,
-						firstName: updatedUser.firstName,
-						lastName: updatedUser.lastName,
-						role: updatedUser.role,
-						phoneNumber: updatedUser.phoneNumber,
-						profileImage: updatedUser.profileImage,
-						address: updatedUser.address,
-						updatedAt: updatedUser.updatedAt,
-					},
+					user: updatedUser,
 				},
 			};
 

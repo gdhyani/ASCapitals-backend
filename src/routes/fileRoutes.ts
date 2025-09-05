@@ -8,6 +8,49 @@ import { IApiResponse } from "../types";
 
 const router = Router();
 
+// Upload profile image (public endpoint for signup)
+router.post(
+	"/upload-profile",
+	authenticate,
+	uploadLimiter,
+	uploadSingle("profileImage"),
+	async (req, res) => {
+		try {
+			if (!req.file) {
+				const response: IApiResponse = {
+					success: false,
+					message: "No profile image provided",
+				};
+				res.status(400).json(response);
+				return;
+			}
+			console.log("req.file", req.file);
+
+			const imageUrl = await FileService.uploadProfileImage(req.file);
+
+			const response: IApiResponse = {
+				success: true,
+				message: "Profile image uploaded successfully",
+				data: { imageUrl },
+			};
+
+			res.status(200).json(response);
+		} catch (error) {
+			logger.error("Profile image upload error:", error);
+
+			const response: IApiResponse = {
+				success: false,
+				message:
+					error instanceof Error
+						? error.message
+						: "Profile image upload failed",
+			};
+
+			res.status(400).json(response);
+		}
+	}
+);
+
 // Upload single file
 router.post(
 	"/upload",
@@ -35,7 +78,7 @@ router.post(
 
 			res.status(200).json(response);
 		} catch (error) {
-			logger.error("File upload error:", error);
+			logger.error("File upload error-File Routes:", error);
 
 			const response: IApiResponse = {
 				success: false,
@@ -81,48 +124,6 @@ router.post(
 			const response: IApiResponse = {
 				success: false,
 				message: error instanceof Error ? error.message : "Files upload failed",
-			};
-
-			res.status(400).json(response);
-		}
-	}
-);
-
-// Upload profile image
-router.post(
-	"/upload-profile",
-	authenticate,
-	uploadLimiter,
-	uploadSingle("image"),
-	async (req, res) => {
-		try {
-			if (!req.file) {
-				const response: IApiResponse = {
-					success: false,
-					message: "No image provided",
-				};
-				res.status(400).json(response);
-				return;
-			}
-
-			const imageUrl = await FileService.uploadProfileImage(req.file);
-
-			const response: IApiResponse = {
-				success: true,
-				message: "Profile image uploaded successfully",
-				data: { imageUrl },
-			};
-
-			res.status(200).json(response);
-		} catch (error) {
-			logger.error("Profile image upload error:", error);
-
-			const response: IApiResponse = {
-				success: false,
-				message:
-					error instanceof Error
-						? error.message
-						: "Profile image upload failed",
 			};
 
 			res.status(400).json(response);

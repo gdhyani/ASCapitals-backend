@@ -1,9 +1,13 @@
+import dotenv from "dotenv";
+
+// Load environment variables FIRST
+dotenv.config();
+
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
 import morgan from "morgan";
-import dotenv from "dotenv";
 
 // Import configurations
 import connectDB from "./config/database";
@@ -19,9 +23,7 @@ import propertyRoutes from "./routes/propertyRoutes";
 import fileRoutes from "./routes/fileRoutes";
 import leadRoutes from "./routes/leadRoutes";
 import userVerificationRoutes from "./routes/userVerificationRoutes";
-
-// Load environment variables
-dotenv.config();
+import superAdminRoutes from "./routes/superAdminRoutes";
 
 // Create Express app
 const app = express();
@@ -71,6 +73,7 @@ app.use("/api/properties", propertyRoutes);
 app.use("/api/files", fileRoutes);
 app.use("/api/leads", leadRoutes);
 app.use("/api/user-verification", userVerificationRoutes);
+app.use("/api/super-admin", superAdminRoutes);
 
 // Root endpoint
 app.get("/", (req, res) => {

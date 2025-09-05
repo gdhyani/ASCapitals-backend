@@ -79,6 +79,7 @@ export class AuthService {
 			);
 
 			// Create verification request (this will create the user with pending status)
+			// profileImage should now be a URL from the separate upload endpoint
 			const verificationRequest =
 				await UserVerificationService.createVerificationRequest(userData);
 

@@ -1,9 +1,9 @@
 import multer from "multer";
 import { Request } from "express";
-import { UPLOAD_CONFIG } from "../config/aws";
+import { UPLOAD_CONFIG } from "../config/imagekit";
 import { logger } from "../config/logger";
 
-// Configure multer for memory storage (we'll upload directly to S3)
+// Configure multer for memory storage (we'll upload directly to ImageKit)
 const storage = multer.memoryStorage();
 
 // File filter function
@@ -43,7 +43,7 @@ export const uploadSingle = (fieldName: string = "file") => {
 	return (req: Request, res: any, next: any) => {
 		upload.single(fieldName)(req, res, (err) => {
 			if (err) {
-				logger.error("File upload error:", err);
+				logger.error("File upload error - Upload Middleware:", err);
 
 				if (err instanceof multer.MulterError) {
 					if (err.code === "LIMIT_FILE_SIZE") {

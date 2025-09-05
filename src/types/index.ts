@@ -31,6 +31,12 @@ export interface IS3UploadResult {
 	Bucket: string;
 }
 
+export interface IImageKitUploadResult {
+	url: string;
+	fileName: string;
+	folder: string;
+}
+
 export interface IApiResponse<T = any> {
 	success: boolean;
 	message: string;

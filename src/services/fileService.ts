@@ -1,40 +1,40 @@
-import { uploadToS3, deleteFromS3, checkFileExists } from "../config/aws";
+import {
+	uploadToImageKit,
+	uploadBase64ToImageKit,
+	deleteFromImageKit,
+	extractFileIdFromUrl,
+} from "../config/imagekit";
 import { logger } from "../config/logger";
-import { IFileUpload, IS3UploadResult } from "../types";
+import { IFileUpload, IImageKitUploadResult } from "../types";
 
 export class FileService {
-	// Upload single file to S3
+	// Upload single file to ImageKit
 	static async uploadFile(
 		file: IFileUpload,
 		folder: string = "uploads"
-	): Promise<IS3UploadResult> {
+	): Promise<IImageKitUploadResult> {
 		try {
 			const fileName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, "_"); // Sanitize filename
-			const fileUrl = await uploadToS3(
-				file.buffer,
-				fileName,
-				file.mimetype,
-				folder
-			);
+			const fileUrl = await uploadToImageKit(file.buffer, fileName, folder);
 
 			logger.info(`File uploaded successfully: ${fileName}`);
 
 			return {
-				Location: fileUrl,
-				Key: `${folder}/${Date.now()}-${fileName}`,
-				Bucket: process.env.AWS_S3_BUCKET_NAME || "as-capitals-bucket",
+				url: fileUrl,
+				fileName: `${Date.now()}-${fileName}`,
+				folder: folder,
 			};
 		} catch (error) {
-			logger.error("File upload error:", error);
+			logger.error("File upload error - File Service:", error);
 			throw new Error("Failed to upload file");
 		}
 	}
 
-	// Upload multiple files to S3
+	// Upload multiple files to ImageKit
 	static async uploadMultipleFiles(
 		files: IFileUpload[],
 		folder: string = "uploads"
-	): Promise<IS3UploadResult[]> {
+	): Promise<IImageKitUploadResult[]> {
 		try {
 			const uploadPromises = files.map((file) => this.uploadFile(file, folder));
 			const results = await Promise.all(uploadPromises);
@@ -48,18 +48,23 @@ export class FileService {
 		}
 	}
 
-	// Delete file from S3
+	// Delete file from ImageKit
 	static async deleteFile(fileUrl: string): Promise<void> {
 		try {
-			await deleteFromS3(fileUrl);
-			logger.info(`File deleted successfully: ${fileUrl}`);
+			const fileId = extractFileIdFromUrl(fileUrl);
+			if (fileId) {
+				await deleteFromImageKit(fileId);
+				logger.info(`File deleted successfully: ${fileUrl}`);
+			} else {
+				throw new Error("Could not extract file ID from URL");
+			}
 		} catch (error) {
 			logger.error("File deletion error:", error);
 			throw new Error("Failed to delete file");
 		}
 	}
 
-	// Delete multiple files from S3
+	// Delete multiple files from ImageKit
 	static async deleteMultipleFiles(fileUrls: string[]): Promise<void> {
 		try {
 			const deletePromises = fileUrls.map((url) => this.deleteFile(url));
@@ -72,10 +77,17 @@ export class FileService {
 		}
 	}
 
-	// Check if file exists in S3
+	// Check if file exists in ImageKit
 	static async fileExists(fileUrl: string): Promise<boolean> {
 		try {
-			return await checkFileExists(fileUrl);
+			// For ImageKit, we can try to fetch the file details
+			// If it exists, it will return details, if not, it will throw an error
+			const fileId = extractFileIdFromUrl(fileUrl);
+			if (!fileId) return false;
+
+			// For now, we'll assume the file exists if we have a valid URL
+			// In a real implementation, you might want to call ImageKit API to check
+			return fileUrl.includes("ik.imagekit.io");
 		} catch (error) {
 			logger.error("File existence check error:", error);
 			return false;
@@ -86,7 +98,7 @@ export class FileService {
 	static async uploadPropertyImages(files: IFileUpload[]): Promise<string[]> {
 		try {
 			const results = await this.uploadMultipleFiles(files, "properties");
-			return results.map((result) => result.Location);
+			return results.map((result) => result.url);
 		} catch (error) {
 			logger.error("Property images upload error:", error);
 			throw new Error("Failed to upload property images");
@@ -96,11 +108,30 @@ export class FileService {
 	// Upload user profile image
 	static async uploadProfileImage(file: IFileUpload): Promise<string> {
 		try {
+			console.log("file-uploadProfileImage", file);
 			const result = await this.uploadFile(file, "profiles");
-			return result.Location;
+			return result.url;
 		} catch (error) {
 			logger.error("Profile image upload error:", error);
 			throw new Error("Failed to upload profile image");
+		}
+	}
+
+	// Upload base64 profile image
+	static async uploadBase64ProfileImage(
+		base64Data: string,
+		fileName: string
+	): Promise<string> {
+		try {
+			const imageUrl = await uploadBase64ToImageKit(
+				base64Data,
+				fileName,
+				"profiles"
+			);
+			return imageUrl;
+		} catch (error) {
+			logger.error("Base64 profile image upload error:", error);
+			throw new Error("Failed to upload base64 profile image");
 		}
 	}
 

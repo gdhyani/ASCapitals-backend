@@ -5,7 +5,7 @@ const connectDB = async (): Promise<void> => {
 	try {
 		const mongoURI =
 			process.env.MONGODB_URI || "mongodb://localhost:27017/as-capitals";
-
+		console.log("MONGODB_URI", mongoURI);
 		const conn = await mongoose.connect(mongoURI, {
 			// Remove deprecated options for newer versions
 		});
