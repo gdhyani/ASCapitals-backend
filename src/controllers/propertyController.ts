@@ -8,12 +8,14 @@ export class PropertyController {
 	// Create new property
 	static async createProperty(req: Request, res: Response): Promise<void> {
 		try {
-			const ownerId = req.user!._id;
+			const agentId = req.user!._id;
+			const userRole = req.user!.role;
 			const propertyData = req.body;
 
 			const property = await PropertyService.createProperty(
 				propertyData,
-				ownerId
+				agentId,
+				userRole
 			);
 
 			const response: IApiResponse = {
@@ -82,6 +84,7 @@ export class PropertyController {
 				filter: {
 					propertyType: req.query.propertyType as string,
 					status: req.query.status as string,
+					approvalStatus: req.query.approvalStatus as string,
 					minPrice: req.query.minPrice
 						? parseFloat(req.query.minPrice as string)
 						: undefined,
@@ -99,7 +102,14 @@ export class PropertyController {
 				},
 			};
 
-			const result = await PropertyService.getAllProperties(queryParams);
+			const userRole = req.user?.role;
+			const userId = req.user?._id;
+			console.log(userId, userRole);
+			const result = await PropertyService.getAllProperties(
+				queryParams,
+				userRole,
+				userId
+			);
 
 			const response: IApiResponse = {
 				success: true,
@@ -341,7 +351,7 @@ export class PropertyController {
 			const userId = req.user!._id;
 			const userRole = req.user!.role;
 			const canUpdate =
-				property.owner.toString() === userId ||
+				property.agent.toString() === userId ||
 				["admin", "super_admin"].includes(userRole);
 
 			if (!canUpdate) {
@@ -408,6 +418,218 @@ export class PropertyController {
 			};
 
 			res.status(500).json(response);
+		}
+	}
+
+	// Get pending properties for approval
+	static async getPendingProperties(
+		req: Request,
+		res: Response
+	): Promise<void> {
+		try {
+			const queryParams = {
+				page: parseInt(req.query.page as string) || 1,
+				limit: parseInt(req.query.limit as string) || 10,
+				sort: (req.query.sort as string) || "-createdAt",
+				search: req.query.search as string,
+			};
+
+			const result = await PropertyService.getPendingProperties(queryParams);
+
+			const response: IApiResponse = {
+				success: true,
+				message: "Pending properties retrieved successfully",
+				data: { properties: result.properties },
+				pagination: {
+					page: queryParams.page,
+					limit: queryParams.limit,
+					total: result.total,
+					pages: result.pages,
+				},
+			};
+
+			res.status(200).json(response);
+		} catch (error) {
+			logger.error("Get pending properties error:", error);
+
+			const response: IApiResponse = {
+				success: false,
+				message: "Failed to retrieve pending properties",
+			};
+
+			res.status(500).json(response);
+		}
+	}
+
+	// Approve property
+	static async approveProperty(req: Request, res: Response): Promise<void> {
+		try {
+			const { id } = req.params;
+			const adminId = req.user!._id;
+
+			const property = await PropertyService.approveProperty(id, adminId);
+
+			const response: IApiResponse = {
+				success: true,
+				message: "Property approved successfully",
+				data: { property },
+			};
+
+			res.status(200).json(response);
+		} catch (error) {
+			logger.error("Approve property error:", error);
+
+			const response: IApiResponse = {
+				success: false,
+				message:
+					error instanceof Error ? error.message : "Property approval failed",
+			};
+
+			res.status(400).json(response);
+		}
+	}
+
+	// Reject property
+	static async rejectProperty(req: Request, res: Response): Promise<void> {
+		try {
+			const { id } = req.params;
+			const { rejectionReason } = req.body;
+			const adminId = req.user!._id;
+
+			if (!rejectionReason) {
+				const response: IApiResponse = {
+					success: false,
+					message: "Rejection reason is required",
+				};
+				res.status(400).json(response);
+				return;
+			}
+
+			const property = await PropertyService.rejectProperty(
+				id,
+				adminId,
+				rejectionReason
+			);
+
+			const response: IApiResponse = {
+				success: true,
+				message: "Property rejected successfully",
+				data: { property },
+			};
+
+			res.status(200).json(response);
+		} catch (error) {
+			logger.error("Reject property error:", error);
+
+			const response: IApiResponse = {
+				success: false,
+				message:
+					error instanceof Error ? error.message : "Property rejection failed",
+			};
+
+			res.status(400).json(response);
+		}
+	}
+
+	// Bulk approve properties
+	static async bulkApproveProperties(
+		req: Request,
+		res: Response
+	): Promise<void> {
+		try {
+			const { propertyIds } = req.body;
+			const adminId = req.user!._id;
+
+			if (
+				!propertyIds ||
+				!Array.isArray(propertyIds) ||
+				propertyIds.length === 0
+			) {
+				const response: IApiResponse = {
+					success: false,
+					message: "Property IDs array is required",
+				};
+				res.status(400).json(response);
+				return;
+			}
+
+			const result = await PropertyService.bulkApproveProperties(
+				propertyIds,
+				adminId
+			);
+
+			const response: IApiResponse = {
+				success: true,
+				message: `${result.approved.length} properties approved successfully`,
+				data: result,
+			};
+
+			res.status(200).json(response);
+		} catch (error) {
+			logger.error("Bulk approve properties error:", error);
+
+			const response: IApiResponse = {
+				success: false,
+				message: "Bulk property approval failed",
+			};
+
+			res.status(400).json(response);
+		}
+	}
+
+	// Bulk reject properties
+	static async bulkRejectProperties(
+		req: Request,
+		res: Response
+	): Promise<void> {
+		try {
+			const { propertyIds, rejectionReason } = req.body;
+			const adminId = req.user!._id;
+
+			if (
+				!propertyIds ||
+				!Array.isArray(propertyIds) ||
+				propertyIds.length === 0
+			) {
+				const response: IApiResponse = {
+					success: false,
+					message: "Property IDs array is required",
+				};
+				res.status(400).json(response);
+				return;
+			}
+
+			if (!rejectionReason) {
+				const response: IApiResponse = {
+					success: false,
+					message: "Rejection reason is required",
+				};
+				res.status(400).json(response);
+				return;
+			}
+
+			const result = await PropertyService.bulkRejectProperties(
+				propertyIds,
+				adminId,
+				rejectionReason
+			);
+
+			const response: IApiResponse = {
+				success: true,
+				message: `${result.rejected.length} properties rejected successfully`,
+				data: result,
+			};
+
+			res.status(200).json(response);
+		} catch (error) {
+			logger.error("Bulk reject properties error:", error);
+
+			const response: IApiResponse = {
+				success: false,
+				message: "Bulk property rejection failed",
+			};
+
+			res.status(400).json(response);
 		}
 	}
 }

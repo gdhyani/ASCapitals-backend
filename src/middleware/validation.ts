@@ -137,32 +137,18 @@ export const validatePropertyCreation = [
 	body("price")
 		.isFloat({ min: 0 })
 		.withMessage("Price must be a positive number"),
-	body("location.address")
+	body("location")
 		.trim()
 		.isLength({ min: 1, max: 200 })
-		.withMessage("Address must be between 1 and 200 characters"),
-	body("location.city")
-		.trim()
-		.isLength({ min: 1, max: 100 })
-		.withMessage("City must be between 1 and 100 characters"),
-	body("location.state")
-		.trim()
-		.isLength({ min: 1, max: 100 })
-		.withMessage("State must be between 1 and 100 characters"),
-	body("location.zipCode")
-		.trim()
-		.isLength({ min: 1, max: 20 })
-		.withMessage("ZIP code must be between 1 and 20 characters"),
-	body("location.country")
-		.optional()
-		.trim()
-		.isLength({ max: 100 })
-		.withMessage("Country cannot exceed 100 characters"),
+		.withMessage("Location must be between 1 and 200 characters"),
 	body("propertyType")
-		.isIn(["apartment", "house", "condo", "townhouse", "commercial"])
+		.isIn(["apartment", "house", "hotel", "townhouse", "commercial"])
 		.withMessage(
-			"Property type must be one of: apartment, house, condo, townhouse, commercial"
+			"Property type must be one of: apartment, house, hotel, townhouse, commercial"
 		),
+	body("propertyFor")
+		.isIn(["sale", "rent"])
+		.withMessage("Property for must be either 'sale' or 'rent'"),
 	body("bedrooms")
 		.isInt({ min: 0, max: 20 })
 		.withMessage("Bedrooms must be between 0 and 20"),
@@ -172,10 +158,29 @@ export const validatePropertyCreation = [
 	body("squareFeet")
 		.isInt({ min: 0 })
 		.withMessage("Square footage must be a positive number"),
-	body("features")
+	body("amenities")
 		.optional()
 		.isArray()
-		.withMessage("Features must be an array"),
+		.withMessage("Amenities must be an array"),
+	body("owner.name")
+		.optional()
+		.trim()
+		.isLength({ max: 100 })
+		.withMessage("Owner name cannot exceed 100 characters"),
+	body("owner.email")
+		.optional()
+		.isEmail()
+		.withMessage("Owner email must be valid"),
+	body("owner.phone")
+		.optional()
+		.trim()
+		.isLength({ max: 20 })
+		.withMessage("Owner phone cannot exceed 20 characters"),
+	body("owner.address")
+		.optional()
+		.trim()
+		.isLength({ max: 200 })
+		.withMessage("Owner address cannot exceed 200 characters"),
 	handleValidationErrors,
 ];
 
@@ -196,10 +201,14 @@ export const validatePropertyUpdate = [
 		.withMessage("Price must be a positive number"),
 	body("propertyType")
 		.optional()
-		.isIn(["apartment", "house", "condo", "townhouse", "commercial"])
+		.isIn(["apartment", "house", "hotel", "townhouse", "commercial"])
 		.withMessage(
-			"Property type must be one of: apartment, house, condo, townhouse, commercial"
+			"Property type must be one of: apartment, house, hotel, townhouse, commercial"
 		),
+	body("propertyFor")
+		.optional()
+		.isIn(["sale", "rent"])
+		.withMessage("Property for must be either 'sale' or 'rent'"),
 	body("bedrooms")
 		.optional()
 		.isInt({ min: 0, max: 20 })
@@ -216,10 +225,10 @@ export const validatePropertyUpdate = [
 		.optional()
 		.isIn(["available", "sold", "rented", "pending"])
 		.withMessage("Status must be one of: available, sold, rented, pending"),
-	body("features")
+	body("amenities")
 		.optional()
 		.isArray()
-		.withMessage("Features must be an array"),
+		.withMessage("Amenities must be an array"),
 	handleValidationErrors,
 ];
 

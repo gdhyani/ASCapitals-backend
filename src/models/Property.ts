@@ -5,26 +5,27 @@ export interface IProperty extends Document {
 	title: string;
 	description: string;
 	price: number;
-	location: {
-		address: string;
-		city: string;
-		state: string;
-		zipCode: string;
-		country: string;
-		coordinates?: {
-			lat: number;
-			lng: number;
-		};
-	};
-	propertyType: "apartment" | "house" | "condo" | "townhouse" | "commercial";
+	location: string;
+	propertyType: "apartment" | "house" | "hotel" | "townhouse" | "commercial";
+	propertyFor: "sale" | "rent";
 	bedrooms: number;
 	bathrooms: number;
 	squareFeet: number;
 	images: string[];
-	features: string[];
+	amenities: string[];
 	status: "available" | "sold" | "rented" | "pending";
-	owner: string; // User ID
-	agent?: string; // User ID
+	owner?: {
+		_id?: mongoose.Schema.Types.ObjectId;
+		name?: string;
+		email?: string;
+		phone?: string;
+		address?: string;
+	};
+	agent: mongoose.Schema.Types.ObjectId; // User ID
+	approvalStatus: "pending" | "approved" | "rejected";
+	approvedBy?: mongoose.Schema.Types.ObjectId; // Super admin who approved/rejected
+	approvedAt?: Date;
+	rejectionReason?: string;
 	createdAt: Date;
 	updatedAt: Date;
 }
@@ -49,52 +50,25 @@ const propertySchema = new Schema<IProperty>(
 			min: [0, "Price cannot be negative"],
 		},
 		location: {
-			address: {
-				type: String,
-				required: [true, "Address is required"],
-				trim: true,
-			},
-			city: {
-				type: String,
-				required: [true, "City is required"],
-				trim: true,
-			},
-			state: {
-				type: String,
-				required: [true, "State is required"],
-				trim: true,
-			},
-			zipCode: {
-				type: String,
-				required: [true, "ZIP code is required"],
-				trim: true,
-			},
-			country: {
-				type: String,
-				required: [true, "Country is required"],
-				trim: true,
-				default: "USA",
-			},
-			coordinates: {
-				lat: {
-					type: Number,
-					min: [-90, "Latitude must be between -90 and 90"],
-					max: [90, "Latitude must be between -90 and 90"],
-				},
-				lng: {
-					type: Number,
-					min: [-180, "Longitude must be between -180 and 180"],
-					max: [180, "Longitude must be between -180 and 180"],
-				},
-			},
+			type: String,
+			required: [true, "Location is required"],
+			maxlength: [200, "Location cannot exceed 200 characters"],
 		},
 		propertyType: {
 			type: String,
 			required: [true, "Property type is required"],
 			enum: {
-				values: ["apartment", "house", "condo", "townhouse", "commercial"],
+				values: ["apartment", "house", "hotel", "townhouse", "commercial"],
 				message:
-					"Property type must be one of: apartment, house, condo, townhouse, commercial",
+					"Property type must be one of: apartment, house, hotel, townhouse, commercial",
+			},
+		},
+		propertyFor: {
+			type: String,
+			required: [true, "Property for is required"],
+			enum: {
+				values: ["sale", "rent"],
+				message: "Property for must be one of: sale, rent",
 			},
 		},
 		bedrooms: {
@@ -117,15 +91,9 @@ const propertySchema = new Schema<IProperty>(
 		images: [
 			{
 				type: String,
-				validate: {
-					validator: function (v: string[]) {
-						return v.length <= 20; // Maximum 20 images
-					},
-					message: "Cannot have more than 20 images",
-				},
 			},
 		],
-		features: [
+		amenities: [
 			{
 				type: String,
 				trim: true,
@@ -141,13 +109,42 @@ const propertySchema = new Schema<IProperty>(
 			default: "available",
 		},
 		owner: {
-			type: String,
-			required: [true, "Property owner is required"],
+			type: {
+				_id: {
+					type: mongoose.Schema.Types.ObjectId,
+					auto: true,
+					required: false,
+				},
+				name: { type: String, required: false },
+				email: { type: String, required: false },
+				phone: { type: String, required: false },
+				address: { type: String, required: false },
+			},
+			required: false,
 		},
 		agent: {
-			type: Schema.Types.ObjectId,
+			type: mongoose.Schema.Types.ObjectId,
 			ref: "User",
 			default: null,
+		},
+		approvalStatus: {
+			type: String,
+			enum: ["pending", "approved", "rejected"],
+			default: "pending",
+		},
+		approvedBy: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "User",
+			required: false,
+		},
+		approvedAt: {
+			type: Date,
+			required: false,
+		},
+		rejectionReason: {
+			type: String,
+			required: false,
+			maxlength: [500, "Rejection reason cannot exceed 500 characters"],
 		},
 	},
 	{
@@ -157,11 +154,6 @@ const propertySchema = new Schema<IProperty>(
 	}
 );
 
-// Virtual for full address
-propertySchema.virtual("fullAddress").get(function (this: IProperty) {
-	return `${this.location.address}, ${this.location.city}, ${this.location.state} ${this.location.zipCode}, ${this.location.country}`;
-});
-
 // Virtual for price per square foot
 propertySchema.virtual("pricePerSqFt").get(function (this: IProperty) {
 	return this.squareFeet > 0 ? Math.round(this.price / this.squareFeet) : 0;
@@ -169,8 +161,6 @@ propertySchema.virtual("pricePerSqFt").get(function (this: IProperty) {
 
 // Indexes for better query performance
 propertySchema.index({ title: "text", description: "text" }); // Text search
-propertySchema.index({ "location.city": 1 });
-propertySchema.index({ "location.state": 1 });
 propertySchema.index({ price: 1 });
 propertySchema.index({ propertyType: 1 });
 propertySchema.index({ bedrooms: 1 });
@@ -178,16 +168,14 @@ propertySchema.index({ bathrooms: 1 });
 propertySchema.index({ status: 1 });
 propertySchema.index({ owner: 1 });
 propertySchema.index({ agent: 1 });
+propertySchema.index({ approvalStatus: 1 });
 propertySchema.index({ createdAt: -1 });
 
 // Static method to find properties by location
-propertySchema.statics.findByLocation = function (
-	city: string,
-	state?: string
-) {
-	const query: any = { "location.city": new RegExp(city, "i") };
-	if (state) {
-		query["location.state"] = new RegExp(state, "i");
+propertySchema.statics.findByLocation = function (location: string) {
+	const query: any = { location: new RegExp(location, "i") };
+	if (location) {
+		query["location"] = new RegExp(location, "i");
 	}
 	return this.find(query);
 };

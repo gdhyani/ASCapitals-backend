@@ -3,7 +3,9 @@ import { PropertyController } from "../controllers/propertyController";
 import {
 	authenticate,
 	requireAdmin,
+	requireSuperAdmin,
 	requireOwnershipOrAdmin,
+	optionalAuth,
 } from "../middleware/auth";
 import { uploadLimiter } from "../middleware/rateLimiter";
 import { uploadMultiple, uploadSingle } from "../middleware/upload";
@@ -17,7 +19,7 @@ import {
 const router = Router();
 
 // Public routes (no authentication required)
-router.get("/", validateQueryParams, PropertyController.getAllProperties);
+router.get("/", optionalAuth, validateQueryParams, PropertyController.getAllProperties);
 router.get(
 	"/stats",
 	authenticate,
@@ -67,6 +69,41 @@ router.get(
 	validateObjectId,
 	validateQueryParams,
 	PropertyController.getPropertiesByAgent
+);
+
+// Property approval routes (Super Admin only)
+router.get(
+	"/approval/pending",
+	authenticate,
+	requireSuperAdmin,
+	validateQueryParams,
+	PropertyController.getPendingProperties
+);
+router.put(
+	"/:id/approve",
+	authenticate,
+	requireSuperAdmin,
+	validateObjectId,
+	PropertyController.approveProperty
+);
+router.put(
+	"/:id/reject",
+	authenticate,
+	requireSuperAdmin,
+	validateObjectId,
+	PropertyController.rejectProperty
+);
+router.post(
+	"/approval/bulk-approve",
+	authenticate,
+	requireSuperAdmin,
+	PropertyController.bulkApproveProperties
+);
+router.post(
+	"/approval/bulk-reject",
+	authenticate,
+	requireSuperAdmin,
+	PropertyController.bulkRejectProperties
 );
 
 export default router;
