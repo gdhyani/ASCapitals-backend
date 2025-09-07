@@ -88,7 +88,16 @@ const userVerificationRequestSchema = new Schema<IUserVerificationRequest>(
 			phoneNumber: {
 				type: String,
 				trim: true,
-				match: [/^[\+]?[1-9][\d]{0,15}$/, "Please enter a valid phone number"],
+				validate: {
+					validator: function (value: string) {
+						if (!value) return true; // Optional field
+						// Remove all non-digit characters
+						const cleaned = value.replace(/\D/g, "");
+						// Check if it's a valid 10-digit US number or international format
+						return cleaned.length >= 10 && cleaned.length <= 15;
+					},
+					message: "Please enter a valid phone number",
+				},
 			},
 			description: {
 				type: String,

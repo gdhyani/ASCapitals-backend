@@ -22,8 +22,21 @@ const validateLeadCreation = [
 		.withMessage("Name must be between 1 and 100 characters"),
 	body("phoneNumber")
 		.trim()
-		.isMobilePhone("en-US")
-		.withMessage("Please provide a valid phone number"),
+		.custom((value) => {
+			if (!value) {
+				throw new Error("Phone number is required");
+			}
+			// Remove all non-digit characters
+			const cleaned = value.replace(/\D/g, "");
+			// Check if it's a valid 10-digit US number or international format
+			if (
+				cleaned.length === 10 ||
+				(cleaned.length >= 10 && cleaned.length <= 15)
+			) {
+				return true;
+			}
+			throw new Error("Please provide a valid phone number");
+		}),
 	body("email")
 		.optional()
 		.isEmail()
@@ -85,8 +98,19 @@ const validateLeadUpdate = [
 	body("phoneNumber")
 		.optional()
 		.trim()
-		.isMobilePhone("en-US")
-		.withMessage("Please provide a valid phone number"),
+		.custom((value) => {
+			if (!value) return true; // Optional field for updates
+			// Remove all non-digit characters
+			const cleaned = value.replace(/\D/g, "");
+			// Check if it's a valid 10-digit US number or international format
+			if (
+				cleaned.length === 10 ||
+				(cleaned.length >= 10 && cleaned.length <= 15)
+			) {
+				return true;
+			}
+			throw new Error("Please provide a valid phone number");
+		}),
 	body("email")
 		.optional()
 		.isEmail()

@@ -109,8 +109,10 @@ export const isValidEmail = (email: string): boolean => {
 
 // Validate phone number format
 export const isValidPhoneNumber = (phoneNumber: string): boolean => {
-	const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
-	return phoneRegex.test(phoneNumber.replace(/\D/g, ""));
+	// Remove all non-digit characters
+	const cleaned = phoneNumber.replace(/\D/g, "");
+	// Check if it's a valid 10-digit US number or international format (10-15 digits)
+	return cleaned.length >= 10 && cleaned.length <= 15;
 };
 
 // Deep clone object

@@ -105,7 +105,7 @@ const userSchema = new Schema<IUser>(
 		},
 		phoneNumber: {
 			type: String,
-			trim: true,
+			trim: true
 		},
 		description: {
 			type: String,

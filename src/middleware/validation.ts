@@ -53,8 +53,19 @@ export const validateUserRegistration = [
 		.withMessage("Last name must be between 1 and 50 characters"),
 	body("phoneNumber")
 		.optional()
-		.isMobilePhone("en-US")
-		.withMessage("Please provide a valid phone number"),
+		.custom((value) => {
+			if (!value) return true; // Optional field
+			// Remove all non-digit characters
+			const cleaned = value.replace(/\D/g, "");
+			// Check if it's a valid 10-digit US number or international format
+			if (
+				cleaned.length === 10 ||
+				(cleaned.length >= 10 && cleaned.length <= 15)
+			) {
+				return true;
+			}
+			throw new Error("Please provide a valid phone number");
+		}),
 	body("description")
 		.optional()
 		.trim()
@@ -94,8 +105,19 @@ export const validateUserUpdate = [
 		.withMessage("Last name must be between 1 and 50 characters"),
 	body("phoneNumber")
 		.optional()
-		.isMobilePhone("en-US")
-		.withMessage("Please provide a valid phone number"),
+		.custom((value) => {
+			if (!value) return true; // Optional field
+			// Remove all non-digit characters
+			const cleaned = value.replace(/\D/g, "");
+			// Check if it's a valid 10-digit US number or international format
+			if (
+				cleaned.length === 10 ||
+				(cleaned.length >= 10 && cleaned.length <= 15)
+			) {
+				return true;
+			}
+			throw new Error("Please provide a valid phone number");
+		}),
 	body("address.street")
 		.optional()
 		.trim()
