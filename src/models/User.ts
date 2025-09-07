@@ -106,7 +106,6 @@ const userSchema = new Schema<IUser>(
 		phoneNumber: {
 			type: String,
 			trim: true,
-			match: [/^[\+]?[1-9][\d]{0,15}$/, "Please enter a valid phone number"],
 		},
 		description: {
 			type: String,
